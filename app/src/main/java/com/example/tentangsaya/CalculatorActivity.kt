@@ -13,12 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 
 class CalculatorActivity : AppCompatActivity() {
     private lateinit var tvResult: TextView
-    private lateinit var tvOperator: TextView
-    private var isinum: Double = 0.0
-    private var currentNumber: String = "0"
-    private var operation: String = ""
-    private var isNewNumber: Boolean = true
-    private var hasDecimal: Boolean = false
+    private var isNewOperation = true
     private lateinit var mediaPlayer1: MediaPlayer
     private lateinit var mediaPlayer2: MediaPlayer
     private lateinit var mediaPlayer3: MediaPlayer
@@ -33,61 +28,135 @@ class CalculatorActivity : AppCompatActivity() {
             insets
         }
 
+        tvResult = findViewById(R.id.tvResult)
+
+        // Initialize MediaPlayer
         mediaPlayer1 = MediaPlayer.create(this, R.raw.audio1)
         mediaPlayer2 = MediaPlayer.create(this, R.raw.audio2)
-        mediaPlayer3 = MediaPlayer.create(this, R.raw.audio4)
+        mediaPlayer3 = MediaPlayer.create(this, R.raw.audio5)
 
-        // Initialize Views
-        tvResult = findViewById(R.id.tvResult)
-        tvOperator = TextView(this).apply {
-            visibility = View.GONE
-            text = ""
-        }
-
-        // Number buttons
         val numberButtons = arrayOf(
             R.id.btn0, R.id.btn1, R.id.btn2, R.id.btn3, R.id.btn4,
             R.id.btn5, R.id.btn6, R.id.btn7, R.id.btn8, R.id.btn9
         )
 
-        // Set click listeners for number buttons
         numberButtons.forEachIndexed { index, buttonId ->
             findViewById<Button>(buttonId).setOnClickListener {
-                onNumberClick(index.toString())
                 mediaPlayer1.start()
+                onNumberClick(index.toString())
             }
-        }
-
-        // Operation buttons
-        findViewById<Button>(R.id.btnPlus).setOnClickListener {
-            onOperationClick("+")
-            mediaPlayer2.start()
-        }
-        findViewById<Button>(R.id.btnMinus).setOnClickListener {
-            onOperationClick("-")
-            mediaPlayer2.start()
-        }
-        findViewById<Button>(R.id.btnMultiply).setOnClickListener {
-            onOperationClick("×")
-            mediaPlayer2.start()
-        }
-        findViewById<Button>(R.id.btnDivide).setOnClickListener {
-            onOperationClick("÷")
-            mediaPlayer2.start()
-        }
-        findViewById<Button>(R.id.btnEquals).setOnClickListener {
-            onEqualsClick()
-            mediaPlayer3.start()
-        }
-        findViewById<Button>(R.id.btnClear).setOnClickListener {
-            onClearClick()
-            mediaPlayer3.start()
         }
 
         findViewById<Button>(R.id.buttonKembali).setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
         }
+
+        // Operation buttons
+        findViewById<Button>(R.id.btnPlus).setOnClickListener {
+            mediaPlayer2.start()
+            onOperationClick("+")
+        }
+        findViewById<Button>(R.id.btnMinus).setOnClickListener {
+            mediaPlayer2.start()
+            onOperationClick("-")
+        }
+        findViewById<Button>(R.id.btnMultiply).setOnClickListener {
+            mediaPlayer2.start()
+            onOperationClick("*")
+        }
+        findViewById<Button>(R.id.btnDivide).setOnClickListener {
+            mediaPlayer2.start()
+            onOperationClick("÷")
+        }
+        findViewById<Button>(R.id.btnEquals).setOnClickListener {
+            mediaPlayer3.start()
+            onEqualsClick()
+        }
+        findViewById<Button>(R.id.btnClear).setOnClickListener {
+            mediaPlayer3.start()
+            onClearClick()
+        }
+    }
+
+    private fun onNumberClick(number: String) {
+        if (tvResult.text == "0" || isNewOperation) {
+            tvResult.text = number
+        } else {
+            tvResult.append(number)
+        }
+        isNewOperation = false
+    }
+
+    private fun onOperationClick(op: String) {
+        val currentText = tvResult.text.toString()
+
+        if (currentText.isEmpty() || currentText.last().toString() in arrayOf("+", "-", "*", "÷")) {
+            return
+        }
+
+        tvResult.append(" $op ")
+        isNewOperation = false
+    }
+
+    private fun onEqualsClick() {
+        try {
+            val expression = tvResult.text.toString()
+            val result = evaluateExpression(expression)
+
+            tvResult.text = if (result.toLong().toDouble() == result) {
+                result.toLong().toString()
+            } else {
+                result.toString()
+            }
+
+            isNewOperation = true
+        } catch (e: Exception) {
+            tvResult.text = "Error"
+        }
+    }
+
+    private fun evaluateExpression(expression: String): Double {
+        val tokens = expression.split(" ").toMutableList()
+
+        // Process multiplication and division first
+        var i = 0
+        while (i < tokens.size) {
+            if (tokens[i] == "*" || tokens[i] == "÷") {
+                val left = tokens[i - 1].toDouble()
+                val right = tokens[i + 1].toDouble()
+                val result = if (tokens[i] == "*") left * right else left / right
+
+                tokens[i - 1] = result.toString()
+                tokens.removeAt(i)
+                tokens.removeAt(i)
+                i--
+            }
+            i++
+        }
+
+        // Process addition and subtraction
+        i = 0
+        while (i < tokens.size) {
+            if (tokens[i] == "+" || tokens[i] == "-") {
+                val left = tokens[i - 1].toDouble()
+                val right = tokens[i + 1].toDouble()
+                val result = if (tokens[i] == "+") left + right else left - right
+
+                tokens[i - 1] = result.toString()
+                tokens.removeAt(i)
+                tokens.removeAt(i)
+                i--
+            }
+            i++
+        }
+
+        return tokens[0].toDouble()
+    }
+
+    private fun onClearClick() {
+        tvResult.text = "0"
+        isNewOperation = true
     }
 
     override fun onDestroy() {
@@ -95,85 +164,5 @@ class CalculatorActivity : AppCompatActivity() {
         mediaPlayer1.release()
         mediaPlayer2.release()
         mediaPlayer3.release()
-    }
-
-    private fun onNumberClick(number: String) {
-        if (isNewNumber) {
-            currentNumber = number
-            isNewNumber = false
-        } else {
-            if (currentNumber == "0") {
-                currentNumber = number
-            } else {
-                currentNumber += number
-            }
-        }
-        tvResult.text = currentNumber
-    }
-
-    private fun onOperationClick(op: String) {
-        try {
-            if (operation.isNotEmpty() && !isNewNumber) {
-                // Jika sudah ada operasi sebelumnya, hitung dulu
-                calculateResult()
-            }
-            isinum = currentNumber.toDouble()
-            operation = op
-            tvOperator.text = op
-            tvOperator.visibility = View.VISIBLE
-            isNewNumber = true
-            hasDecimal = false
-        } catch (e: Exception) {
-            tvResult.text = "Error"
-            resetCalculator()
-        }
-    }
-
-    private fun onEqualsClick() {
-        try {
-            if (operation.isNotEmpty()) {
-                calculateResult()
-                operation = ""
-                tvOperator.visibility = View.GONE
-                isNewNumber = true
-                hasDecimal = currentNumber.contains(".")
-            }
-        } catch (e: Exception) {
-            tvResult.text = "Error"
-            resetCalculator()
-        }
-    }
-
-    private fun calculateResult() {
-        val secondNumber = currentNumber.toDouble()
-        val result = when (operation) {
-            "+" -> isinum + secondNumber
-            "-" -> isinum - secondNumber
-            "×" -> isinum * secondNumber
-            "÷" -> if (secondNumber != 0.0) isinum / secondNumber else throw ArithmeticException("Division by zero")
-            else -> secondNumber
-        }
-
-        currentNumber = if (result.toLong().toDouble() == result) {
-            result.toLong().toString()
-        } else {
-            result.toString()
-        }
-        tvResult.text = currentNumber
-        isinum = result
-    }
-
-    private fun onClearClick() {
-        resetCalculator()
-    }
-
-    private fun resetCalculator() {
-        currentNumber = "0"
-        isinum = 0.0
-        operation = ""
-        isNewNumber = true
-        hasDecimal = false
-        tvResult.text = "0"
-        tvOperator.visibility = View.GONE
     }
 }
