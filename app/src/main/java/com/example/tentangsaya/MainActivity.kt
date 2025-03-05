@@ -2,6 +2,7 @@ package com.example.tentangsaya
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AlertDialog
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.tentangsaya.databinding.ActivityMainBinding
+import com.example.tentangsaya.NotesAppActivity
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -41,6 +43,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.buttonProject1.setOnClickListener {
             val intent = Intent(this, CalculatorActivity::class.java)
+            startActivity(intent)
+        }
+
+        binding.btnNotes.setOnClickListener {
+            val intent = Intent(this, NotesAppActivity::class.java)
             startActivity(intent)
         }
     }
